@@ -23,6 +23,11 @@ app.use(session({ secret: 'keyboard cat', resave: false, saveUninitialized: fals
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ message: err.message });
+});
+
 // Passport configuration
 require('./auth');
 
@@ -46,7 +51,7 @@ app.get('/api/clientinfo', routes.client.info);
 // vs.
 // https://zeit.co/docs/v2/deployments/official-builders/node-js-now-node/
 
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3030);
 
 // Required for @now/node, optional for @now/node-server.
 module.exports = app;
