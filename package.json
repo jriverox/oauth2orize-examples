@@ -10,8 +10,8 @@
     }
   ],
   "scripts": {
-    "start": "node app.js",
-    "lint:show": "eslint -f stylish",
+    "start": "node src/app.js",
+    "lint:show": "eslint -f src/ stylish",
     "lint:fix": "eslint --fix --ext .js ."
   },
   "dependencies": {
