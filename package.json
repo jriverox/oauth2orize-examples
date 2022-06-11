@@ -10,7 +10,9 @@
     }
   ],
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "lint:show": "eslint -f stylish",
+    "lint:fix": "eslint --fix --ext .js ."
   },
   "dependencies": {
     "@poziworld/oauth2orize": "^1.11.1",
@@ -27,5 +29,13 @@
     "passport-http-bearer": "^1.0.1",
     "passport-local": "^1.0.0",
     "passport-oauth2-client-password": "^0.1.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.17.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "prettier": "^2.6.2"
   }
 }
