@@ -6,6 +6,7 @@ const BasicStrategy = require('passport-http').BasicStrategy;
 const ClientPasswordStrategy = require('passport-oauth2-client-password').Strategy;
 const BearerStrategy = require('passport-http-bearer').Strategy;
 const db = require('../db');
+const clientRepository = require('../repositories/client.repository');
 
 /**
  * LocalStrategy
@@ -27,8 +28,19 @@ passport.use(new LocalStrategy(
 
 passport.serializeUser((user, done) =>  done(null, user.id));
 
+// passport.deserializeUser((id, done) => {
+//   db.users.findById(id, (error, user) => done(error, user));
+// });
+
 passport.deserializeUser((id, done) => {
-  db.users.findById(id, (error, user) => done(error, user));
+  //db.users.findById(id, (error, user) => done(error, user));
+  clientRepository.findByClientId(id)
+    .then((client) => {
+      return done(null, client);
+    }).catch((error) => {
+      console.error(error);
+      return done(error);
+    });
 });
 
 /**
@@ -42,13 +54,26 @@ passport.deserializeUser((id, done) => {
  * to the `Authorization` header). While this approach is not recommended by
  * the specification, in practice it is quite common.
  */
+// function verifyClient(clientId, clientSecret, done) {
+//   db.clients.findByClientId(clientId, (error, client) => {
+//     if (error) return done(error);
+//     if (!client) return done(null, false);
+//     if (client.clientSecret !== clientSecret) return done(null, false);
+//     return done(null, client);
+//   });
+// }
+
 function verifyClient(clientId, clientSecret, done) {
-  db.clients.findByClientId(clientId, (error, client) => {
-    if (error) return done(error);
-    if (!client) return done(null, false);
-    if (client.clientSecret !== clientSecret) return done(null, false);
-    return done(null, client);
-  });
+  clientRepository.findByClientId(clientId)
+    .then((client) => {
+      if (client.clientSecret !== clientSecret) {
+        return done(null, false);
+      } 
+      return done(null, client);
+    }).catch((error) => {
+      console.error(error);
+      return done(error);
+    });
 }
 
 passport.use(new BasicStrategy(verifyClient));
@@ -78,13 +103,21 @@ passport.use(new BearerStrategy(
         });
       } else {
         // The request came from a client only since userId is null,
-        // therefore the client is passed back instead of a user.
-        db.clients.findByClientId(token.clientId, (error, client) => {
-          if (error) return done(error);
+        // therefore the client is passed back instead of a user.ç
+        // db.clients.findByClientId(token.clientId, (error, client) => {
+        //   if (error) return done(error);
+        //   if (!client) return done(null, false);
+        //   // To keep this example simple, restricted scopes are not implemented,
+        //   // and this is just for illustrative purposes.
+        //   done(null, client, { scope: '*' });
+        // });
+        clientRepository.findByClientId(token.clientId)
+        .then((client) => {
           if (!client) return done(null, false);
-          // To keep this example simple, restricted scopes are not implemented,
-          // and this is just for illustrative purposes.
           done(null, client, { scope: '*' });
+        }).catch((error) => {
+          console.error(error);
+          return done(error);
         });
       }
     });

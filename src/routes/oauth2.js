@@ -5,7 +5,7 @@ const passport = require('passport');
 const login = require('connect-ensure-login');
 const db = require('../db');
 const utils = require('../utils');
-
+const clientRepository = require('../repositories/client.repository');
 // Create OAuth 2.0 server
 const server = oauth2orize.createServer();
 
@@ -22,14 +22,32 @@ const server = oauth2orize.createServer();
 // simple matter of serializing the client's ID, and deserializing by finding
 // the client by ID from the database.
 
-server.serializeClient((client, done) => done(null, client.id));
+server.serializeClient((client, done) => {
+  console.log(`serializeClient ${client}`);
+  return done(null, client.id);
+});
+
+// server.deserializeClient((id, done) => {
+//   console.log('deserializeClient');
+//   db.clients.findById(id, (error, client) => {
+//     if (error) return done(error);
+//     return done(null, client);
+//   });
+// });
 
 server.deserializeClient((id, done) => {
-  console.log('deserializeClient');
-  db.clients.findById(id, (error, client) => {
-    if (error) return done(error);
-    return done(null, client);
-  });
+  console.log(`deserializeClient ${id}`);
+  clientRepository.findByClientId(id)
+    .then((client) => {
+      return done(null, client);
+    }).catch((error) => {
+      console.error(error);
+      return done(error);
+    });
+  // db.clients.findById(id, (error, client) => {
+  //   if (error) return done(error);
+  //   return done(null, client);
+  // });
 });
 
 function issueTokens(userId, clientId, done) {
@@ -110,19 +128,37 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
 server.exchange(oauth2orize.exchange.password((client, username, password, scope, done) => {
   console.log('exchange oauth2orize.grant.password');
   // Validate the client
-  db.clients.findByClientId(client.clientId, (error, localClient) => {
-    if (error) return done(error);
-    if (!localClient) return done(null, false);
-    if (localClient.clientSecret !== client.clientSecret) return done(null, false);
-    // Validate the user
-    db.users.findByUsername(username, (error, user) => {
-      if (error) return done(error);
-      if (!user) return done(null, false);
-      if (password !== user.password) return done(null, false);
-      // Everything validated, return the token
-      issueTokens(user.id, client.clientId, done);
+  clientRepository.findByClientId(client.clientId)
+    .then((localClient) => {
+      if (!localClient) return done(null, false);
+      if (localClient.clientSecret !== client.clientSecret) return done(null, false);
+      
+      db.users.findByUsername(username, (error, user) => {
+        if (error) return done(error);
+        if (!user) return done(null, false);
+        if (password !== user.password) return done(null, false);
+        // Everything validated, return the token
+        issueTokens(user.id, client.clientId, done);
+      });
+
+    }).catch((error) => {
+      console.error(error);
+      return done(error);
     });
-  });
+
+  // db.clients.findByClientId(client.clientId, (error, localClient) => {
+  //   if (error) return done(error);
+  //   if (!localClient) return done(null, false);
+  //   if (localClient.clientSecret !== client.clientSecret) return done(null, false);
+  //   // Validate the user
+  //   db.users.findByUsername(username, (error, user) => {
+  //     if (error) return done(error);
+  //     if (!user) return done(null, false);
+  //     if (password !== user.password) return done(null, false);
+  //     // Everything validated, return the token
+  //     issueTokens(user.id, client.clientId, done);
+  //   });
+  // });
 }));
 
 // Exchange the client id and password/secret for an access token. The callback accepts the
@@ -133,14 +169,25 @@ server.exchange(oauth2orize.exchange.password((client, username, password, scope
 server.exchange(oauth2orize.exchange.clientCredentials((client, scope, done) => {
   console.log('exchange oauth2orize.grant.clientCredentials');
   // Validate the client
-  db.clients.findByClientId(client.clientId, (error, localClient) => {
-    if (error) return done(error);
-    if (!localClient) return done(null, false);
-    if (localClient.clientSecret !== client.clientSecret) return done(null, false);
-    // Everything validated, return the token
-    // Pass in a null for user id since there is no user with this grant type
-    issueTokens(null, client.clientId, done);
-  });
+  clientRepository.findByClientId(client.clientId)
+    .then((localClient) => {
+      if (!localClient) return done(null, false);
+      if (localClient.clientSecret !== client.clientSecret) return done(null, false);
+      // Everything validated, return the token
+      // Pass in a null for user id since there is no user with this grant type
+      issueTokens(null, client.clientId, done);
+    }).catch((error) => {
+      console.error(error);
+      return done(error);
+    });
+  // db.clients.findByClientId(client.clientId, (error, localClient) => {
+  //   if (error) return done(error);
+  //   if (!localClient) return done(null, false);
+  //   if (localClient.clientSecret !== client.clientSecret) return done(null, false);
+  //   // Everything validated, return the token
+  //   // Pass in a null for user id since there is no user with this grant type
+  //   issueTokens(null, client.clientId, done);
+  // });
 }));
 
 // issue new tokens and remove the old ones
@@ -187,14 +234,26 @@ module.exports.authorization = [
   login.ensureLoggedIn(),
   server.authorization((clientId, redirectUri, done) => {
     console.log('authorization');
-    db.clients.findByClientId(clientId, (error, client) => {
-      if (error) return done(error);
+    clientRepository.findByClientId(clientId)
+    .then((client) => {
       // WARNING: For security purposes, it is highly advisable to check that
       //          redirectUri provided by the client matches one registered with
       //          the server. For simplicity, this example does not. You have
       //          been warned.
       return done(null, client, redirectUri);
+    }).catch((error) => {
+      console.error(error);
+      return done(error);
     });
+
+    // db.clients.findByClientId(clientId, (error, client) => {
+    //   if (error) return done(error);
+    //   // WARNING: For security purposes, it is highly advisable to check that
+    //   //          redirectUri provided by the client matches one registered with
+    //   //          the server. For simplicity, this example does not. You have
+    //   //          been warned.
+    //   return done(null, client, redirectUri);
+    // });
   }, (client, user, done) => {
     // Check if grant request qualifies for immediate approval
 
