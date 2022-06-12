@@ -6,17 +6,21 @@ const clients = [
 ];
 
 module.exports.findById = (id, done) => {
+  console.log(`clients.findById: id: ${id}`);
+
   for (let i = 0, len = clients.length; i < len; i++) {
     if (clients[i].id === id) return done(null, clients[i]);
   }
-  console.log(`findById: id: ${id}`);
-  return done(new Error('Client Not Found'));
+  
+  return done(new Error(`Client ${id} Not Found`));
 };
 
 module.exports.findByClientId = (clientId, done) => {
+  console.log(`clients.findByClientId: clientId: ${clientId}`);
+
   for (let i = 0, len = clients.length; i < len; i++) {
     if (clients[i].clientId === clientId) return done(null, clients[i]);
   }
-  console.log(`findByClientId: clientId: ${clientId}`);
-  return done(new Error('Client Not Found'));
+  
+  return done(new Error(`Client ${clientId} Not Found`));
 };

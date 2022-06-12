@@ -1,8 +1,6 @@
-'use strict';
-
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
-const BasicStrategy = require('passport-http').BasicStrategy;
+const { BasicStrategy } = require('passport-http');
 const ClientPasswordStrategy = require('passport-oauth2-client-password').Strategy;
 const BearerStrategy = require('passport-http-bearer').Strategy;
 const db = require('../db');
@@ -25,9 +23,15 @@ passport.use(new LocalStrategy(
   }
 ));
 
-passport.serializeUser((user, done) =>  done(null, user.id));
+passport.serializeUser((user, done) =>  {
+  console.log(`auth/index/passport.serializeUser user: ${JSON.stringify(user)}`);
+
+  return done(null, user.id);
+});
 
 passport.deserializeUser((id, done) => {
+  console.log(`auth/index/passport.deserializeUser id: ${id}`);
+
   db.users.findById(id, (error, user) => done(error, user));
 });
 
@@ -43,6 +47,8 @@ passport.deserializeUser((id, done) => {
  * the specification, in practice it is quite common.
  */
 function verifyClient(clientId, clientSecret, done) {
+  console.log(`auth/index/verifyClient clientId: ${clientId} clientSecret: ${clientSecret}`);
+
   db.clients.findByClientId(clientId, (error, client) => {
     if (error) return done(error);
     if (!client) return done(null, false);

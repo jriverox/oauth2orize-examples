@@ -1,5 +1,3 @@
-'use strict';
-
 const oauth2orize = require('@poziworld/oauth2orize');
 const passport = require('passport');
 const login = require('connect-ensure-login');
@@ -22,10 +20,15 @@ const server = oauth2orize.createServer();
 // simple matter of serializing the client's ID, and deserializing by finding
 // the client by ID from the database.
 
-server.serializeClient((client, done) => done(null, client.id));
+server.serializeClient((client, done) => {
+  console.log(`oauth2.server.serializeClient client: ${JSON.stringify(client)}`);
+
+  return done(null, client.id)
+});
 
 server.deserializeClient((id, done) => {
-  console.log('deserializeClient');
+  console.log(`oauth2.server.deserializeClient client.id: ${id}`);
+
   db.clients.findById(id, (error, client) => {
     if (error) return done(error);
     return done(null, client);
@@ -33,7 +36,8 @@ server.deserializeClient((id, done) => {
 });
 
 function issueTokens(userId, clientId, done) {
-  console.log('issueTokens');
+  console.log(`oauth2.issueTokens userId: ${userId}`);
+
   db.users.findById(userId, (error, user) => {
     const accessToken = utils.getUid(256);
     const refreshToken = utils.getUid(256);
@@ -64,10 +68,11 @@ function issueTokens(userId, clientId, done) {
 // values, and will be exchanged for an access token.
 
 server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
-  console.log('grant oauth2orize.grant.code');
+  console.log(`grant oauth2orize.grant.code client: ${JSON.stringify(client)} redirectUri: ${redirectUri} user: ${JSON.stringify(user)}`);
   const code = utils.getUid(16);
   db.authorizationCodes.save(code, client.id, redirectUri, user.id, user.username, (error) => {
     console.log(`authorizationCodes.save: code:${code} client.id:${client.id} redirectUri:${redirectUri} user.id:${user.id} user.username:${user.username}`);
+    
     if (error) return done(error);
     return done(null, code);
   });
@@ -80,7 +85,8 @@ server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
 // values.
 
 server.grant(oauth2orize.grant.token((client, user, ares, done) => {
-  console.log('grant oauth2orize.grant.token');
+  console.log(`grant oauth2orize.grant.token client: ${JSON.stringify(client)} user: ${JSON.stringify(user)}`);
+  
   issueTokens(user.id, client.clientId, done);
 }));
 
@@ -92,7 +98,8 @@ server.grant(oauth2orize.grant.token((client, user, ares, done) => {
 // custom parameters by adding these to the `done()` call
 
 server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
-  console.log('exchange oauth2orize.grant.code');
+  console.log(`oauth2orize.exchange.code client: ${JSON.stringify(client)} code: ${code}`);
+
   db.authorizationCodes.find(code, (error, authCode) => {
     if (error) return done(error);
     if (client.id !== authCode.clientId) return done(null, false);
@@ -186,7 +193,7 @@ server.exchange(oauth2orize.exchange.refreshToken((client, refreshToken, scope, 
 module.exports.authorization = [
   login.ensureLoggedIn(),
   server.authorization((clientId, redirectUri, done) => {
-    console.log('authorization');
+    console.log(`authorization clientId: ${clientId} redirectUri: ${redirectUri}`);
     db.clients.findByClientId(clientId, (error, client) => {
       if (error) return done(error);
       // WARNING: For security purposes, it is highly advisable to check that
@@ -210,7 +217,8 @@ module.exports.authorization = [
     });
   }),
   (request, response) => {
-    response.render('dialog', { transactionId: request.oauth2.transactionID, user: request.user, client: request.oauth2.client });
+    //response.render('dialog'
+    response.render('oauth', { transactionId: request.oauth2.transactionID, user: request.user, client: request.oauth2.client });
   },
 ];
 
@@ -241,7 +249,7 @@ module.exports.decision = [
 module.exports.token = [
   (req, res, next) => {
     console.log('token 1');
-    console.log(req.body);
+    console.log(JSON.stringify(req.body));
     return next();
   },
   passport.authenticate(['basic', 'oauth2-client-password'], { session: false }),
